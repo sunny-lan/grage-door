@@ -1,0 +1,7 @@
+{
+  "name": "grage-garage-door-app",
+  "version": "1.0.0",
+  "dependencies": {
+    "grage-lib": "^1.0.3"
+  }
+}

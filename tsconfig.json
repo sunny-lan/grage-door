@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "module": "commonjs",
+    "target": "ES6",
+    "lib": ["ES2015", "DOM"],
+    "rootDir": "."
+  }
+}
