@@ -4,11 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const grage_1 = __importDefault(require("grage-lib/grage"));
+const client_1 = __importDefault(require("grage-lib/client"));
 const esp8266_1 = __importDefault(require("grage-lib/esp8266"));
 const util_1 = __importDefault(require("grage-lib/util"));
 window.onload = function () {
-    const grage = grage_1.default();
+    const grage = client_1.default();
     const data = grage.getData({});
     const id = data.currentID;
     //if no device selected, return to index
@@ -76,112 +76,47 @@ window.onload = function () {
     };
 };
 
-},{"grage-lib/esp8266":2,"grage-lib/grage":4,"grage-lib/util":3}],2:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-var PinMode;
-(function (PinMode) {
-    PinMode[PinMode["INPUT"] = 0] = "INPUT";
-    PinMode[PinMode["INPUT_PULLUP"] = 2] = "INPUT_PULLUP";
-    PinMode[PinMode["OUTPUT"] = 1] = "OUTPUT";
-})(PinMode || (PinMode = {}));
-var InterruptMode;
-(function (InterruptMode) {
-    InterruptMode[InterruptMode["RISING"] = 1] = "RISING";
-    InterruptMode[InterruptMode["FALLING"] = 2] = "FALLING";
-    InterruptMode[InterruptMode["CHANGE"] = 3] = "CHANGE";
-    InterruptMode[InterruptMode["ONLOW"] = 4] = "ONLOW";
-    InterruptMode[InterruptMode["ONHIGH"] = 5] = "ONHIGH";
-})(InterruptMode || (InterruptMode = {}));
-var LogicLevel;
-(function (LogicLevel) {
-    LogicLevel[LogicLevel["HIGH"] = 1] = "HIGH";
-    LogicLevel[LogicLevel["LOW"] = 0] = "LOW";
-})(LogicLevel || (LogicLevel = {}));
-var Pin;
-(function (Pin) {
-    Pin[Pin["D0"] = 16] = "D0";
-    Pin[Pin["D1"] = 5] = "D1";
-    Pin[Pin["D2"] = 4] = "D2";
-    Pin[Pin["D3"] = 0] = "D3";
-    Pin[Pin["D4"] = 2] = "D4";
-    Pin[Pin["D5"] = 14] = "D5";
-    Pin[Pin["D6"] = 12] = "D6";
-    Pin[Pin["D7"] = 13] = "D7";
-    Pin[Pin["D8"] = 15] = "D8";
-    Pin[Pin["D9"] = 3] = "D9";
-    Pin[Pin["D10"] = 1] = "D10";
-    Pin[Pin["_A0"] = 17] = "_A0";
-})(Pin || (Pin = {}));
-// @ts-ignore
-exports.default = {
-    LogicLevel,
-    PinMode,
-    InterruptMode,
-    Pin,
-    pinMode(pin, mode) {
-        return {
-            command: 'pinMode',
-            pin, mode,
-        };
-    },
-    digitalWrite(pin, value) {
-        return {
-            command: 'digitalWrite',
-            pin, value,
-        };
-    },
-    attachInterrupt(pin, mode) {
-        return {
-            command: 'attachInterrupt',
-            pin, mode,
-        };
-    },
-    detachInterrupt(pin) {
-        return {
-            command: 'detachInterrupt',
-            pin
-        };
-    },
+},{"grage-lib/client":3,"grage-lib/esp8266":4,"grage-lib/util":5}],2:[function(require,module,exports){
+var naiveFallback = function () {
+	if (typeof self === "object" && self) return self;
+	if (typeof window === "object" && window) return window;
+	throw new Error("Unable to resolve global `this`");
 };
+
+module.exports = (function () {
+	if (this) return this;
+
+	// Unexpected strict mode (may happen if e.g. bundled into ESM module)
+
+	// Fallback to standard globalThis if available
+	if (typeof globalThis === "object" && globalThis) return globalThis;
+
+	// Thanks @mathiasbynens -> https://mathiasbynens.be/notes/globalthis
+	// In all ES5+ engines global object inherits from Object.prototype
+	// (if you approached one that doesn't please report)
+	try {
+		Object.defineProperty(Object.prototype, "__global__", {
+			get: function () { return this; },
+			configurable: true
+		});
+	} catch (error) {
+		// Unfortunate case of updates to Object.prototype being restricted
+		// via preventExtensions, seal or freeze
+		return naiveFallback();
+	}
+	try {
+		// Safari case (window.__global__ works, but __global__ does not)
+		if (!__global__) return naiveFallback();
+		return __global__;
+	} finally {
+		delete Object.prototype.__global__;
+	}
+})();
 
 },{}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-// @ts-ignore
-exports.default = {
-    timeDifference(current, previous) {
-        const msPerMinute = 60 * 1000;
-        const msPerHour = msPerMinute * 60;
-        const msPerDay = msPerHour * 24;
-        const msPerMonth = msPerDay * 30;
-        const msPerYear = msPerDay * 365;
-        // @ts-ignore
-        const elapsed = current - previous;
-        if (elapsed < msPerMinute) {
-            return Math.round(elapsed / 1000) + ' seconds ago';
-        }
-        else if (elapsed < msPerHour) {
-            return Math.round(elapsed / msPerMinute) + ' minutes ago';
-        }
-        else if (elapsed < msPerDay) {
-            return Math.round(elapsed / msPerHour) + ' hours ago';
-        }
-        else if (elapsed < msPerMonth) {
-            return 'approximately ' + Math.round(elapsed / msPerDay) + ' days ago';
-        }
-        else if (elapsed < msPerYear) {
-            return 'approximately ' + Math.round(elapsed / msPerMonth) + ' months ago';
-        }
-        else {
-            return 'approximately ' + Math.round(elapsed / msPerYear) + ' years ago';
-        }
-    }
-};
-
-},{}],4:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
+const websocket_1 = require("websocket");
 function isRequestPing(m) {
     return m.type === 'rping';
 }
@@ -206,7 +141,7 @@ function makeGrage(host = undefined) {
     if (window.location.protocol !== 'https:')
         protocol = 'ws';
     host !== null && host !== void 0 ? host : (host = `${protocol}://${window.location.hostname}:${window.location.port}/ws`);
-    const ws = new WebSocket(host);
+    const ws = new websocket_1.w3cwebsocket(host);
     //list of listeners for when the websocket connects
     let openListeners = [];
     const channels = {};
@@ -510,5 +445,227 @@ function makeGrage(host = undefined) {
     return grage;
 }
 exports.default = makeGrage;
+
+},{"websocket":6}],4:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+var PinMode;
+(function (PinMode) {
+    PinMode[PinMode["INPUT"] = 0] = "INPUT";
+    PinMode[PinMode["INPUT_PULLUP"] = 2] = "INPUT_PULLUP";
+    PinMode[PinMode["OUTPUT"] = 1] = "OUTPUT";
+})(PinMode || (PinMode = {}));
+var InterruptMode;
+(function (InterruptMode) {
+    InterruptMode[InterruptMode["RISING"] = 1] = "RISING";
+    InterruptMode[InterruptMode["FALLING"] = 2] = "FALLING";
+    InterruptMode[InterruptMode["CHANGE"] = 3] = "CHANGE";
+    InterruptMode[InterruptMode["ONLOW"] = 4] = "ONLOW";
+    InterruptMode[InterruptMode["ONHIGH"] = 5] = "ONHIGH";
+})(InterruptMode || (InterruptMode = {}));
+var LogicLevel;
+(function (LogicLevel) {
+    LogicLevel[LogicLevel["HIGH"] = 1] = "HIGH";
+    LogicLevel[LogicLevel["LOW"] = 0] = "LOW";
+})(LogicLevel || (LogicLevel = {}));
+var Pin;
+(function (Pin) {
+    Pin[Pin["D0"] = 16] = "D0";
+    Pin[Pin["D1"] = 5] = "D1";
+    Pin[Pin["D2"] = 4] = "D2";
+    Pin[Pin["D3"] = 0] = "D3";
+    Pin[Pin["D4"] = 2] = "D4";
+    Pin[Pin["D5"] = 14] = "D5";
+    Pin[Pin["D6"] = 12] = "D6";
+    Pin[Pin["D7"] = 13] = "D7";
+    Pin[Pin["D8"] = 15] = "D8";
+    Pin[Pin["D9"] = 3] = "D9";
+    Pin[Pin["D10"] = 1] = "D10";
+    Pin[Pin["_A0"] = 17] = "_A0";
+})(Pin || (Pin = {}));
+// @ts-ignore
+exports.default = {
+    LogicLevel,
+    PinMode,
+    InterruptMode,
+    Pin,
+    pinMode(pin, mode) {
+        return {
+            command: 'pinMode',
+            pin, mode,
+        };
+    },
+    digitalWrite(pin, value) {
+        return {
+            command: 'digitalWrite',
+            pin, value,
+        };
+    },
+    attachInterrupt(pin, mode) {
+        return {
+            command: 'attachInterrupt',
+            pin, mode,
+        };
+    },
+    detachInterrupt(pin) {
+        return {
+            command: 'detachInterrupt',
+            pin
+        };
+    },
+};
+
+},{}],5:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+// @ts-ignore
+exports.default = {
+    timeDifference(current, previous) {
+        const msPerMinute = 60 * 1000;
+        const msPerHour = msPerMinute * 60;
+        const msPerDay = msPerHour * 24;
+        const msPerMonth = msPerDay * 30;
+        const msPerYear = msPerDay * 365;
+        // @ts-ignore
+        const elapsed = current - previous;
+        if (elapsed < msPerMinute) {
+            return Math.round(elapsed / 1000) + ' seconds ago';
+        }
+        else if (elapsed < msPerHour) {
+            return Math.round(elapsed / msPerMinute) + ' minutes ago';
+        }
+        else if (elapsed < msPerDay) {
+            return Math.round(elapsed / msPerHour) + ' hours ago';
+        }
+        else if (elapsed < msPerMonth) {
+            return 'approximately ' + Math.round(elapsed / msPerDay) + ' days ago';
+        }
+        else if (elapsed < msPerYear) {
+            return 'approximately ' + Math.round(elapsed / msPerMonth) + ' months ago';
+        }
+        else {
+            return 'approximately ' + Math.round(elapsed / msPerYear) + ' years ago';
+        }
+    }
+};
+
+},{}],6:[function(require,module,exports){
+var _globalThis;
+if (typeof globalThis === 'object') {
+	_globalThis = globalThis;
+} else {
+	try {
+		_globalThis = require('es5-ext/global');
+	} catch (error) {
+	} finally {
+		if (!_globalThis && typeof window !== 'undefined') { _globalThis = window; }
+		if (!_globalThis) { throw new Error('Could not determine global this'); }
+	}
+}
+
+var NativeWebSocket = _globalThis.WebSocket || _globalThis.MozWebSocket;
+var websocket_version = require('./version');
+
+
+/**
+ * Expose a W3C WebSocket class with just one or two arguments.
+ */
+function W3CWebSocket(uri, protocols) {
+	var native_instance;
+
+	if (protocols) {
+		native_instance = new NativeWebSocket(uri, protocols);
+	}
+	else {
+		native_instance = new NativeWebSocket(uri);
+	}
+
+	/**
+	 * 'native_instance' is an instance of nativeWebSocket (the browser's WebSocket
+	 * class). Since it is an Object it will be returned as it is when creating an
+	 * instance of W3CWebSocket via 'new W3CWebSocket()'.
+	 *
+	 * ECMAScript 5: http://bclary.com/2004/11/07/#a-13.2.2
+	 */
+	return native_instance;
+}
+if (NativeWebSocket) {
+	['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'].forEach(function(prop) {
+		Object.defineProperty(W3CWebSocket, prop, {
+			get: function() { return NativeWebSocket[prop]; }
+		});
+	});
+}
+
+/**
+ * Module exports.
+ */
+module.exports = {
+    'w3cwebsocket' : NativeWebSocket ? W3CWebSocket : null,
+    'version'      : websocket_version
+};
+
+},{"./version":7,"es5-ext/global":2}],7:[function(require,module,exports){
+module.exports = require('../package.json').version;
+
+},{"../package.json":8}],8:[function(require,module,exports){
+module.exports={
+  "name": "websocket",
+  "description": "Websocket Client & Server Library implementing the WebSocket protocol as specified in RFC 6455.",
+  "keywords": [
+    "websocket",
+    "websockets",
+    "socket",
+    "networking",
+    "comet",
+    "push",
+    "RFC-6455",
+    "realtime",
+    "server",
+    "client"
+  ],
+  "author": "Brian McKelvey <theturtle32@gmail.com> (https://github.com/theturtle32)",
+  "contributors": [
+    "Iñaki Baz Castillo <ibc@aliax.net> (http://dev.sipdoc.net)"
+  ],
+  "version": "1.0.34",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/theturtle32/WebSocket-Node.git"
+  },
+  "homepage": "https://github.com/theturtle32/WebSocket-Node",
+  "engines": {
+    "node": ">=4.0.0"
+  },
+  "dependencies": {
+    "bufferutil": "^4.0.1",
+    "debug": "^2.2.0",
+    "es5-ext": "^0.10.50",
+    "typedarray-to-buffer": "^3.1.5",
+    "utf-8-validate": "^5.0.2",
+    "yaeti": "^0.0.6"
+  },
+  "devDependencies": {
+    "buffer-equal": "^1.0.0",
+    "gulp": "^4.0.2",
+    "gulp-jshint": "^2.0.4",
+    "jshint-stylish": "^2.2.1",
+    "jshint": "^2.0.0",
+    "tape": "^4.9.1"
+  },
+  "config": {
+    "verbose": false
+  },
+  "scripts": {
+    "test": "tape test/unit/*.js",
+    "gulp": "gulp"
+  },
+  "main": "index",
+  "directories": {
+    "lib": "./lib"
+  },
+  "browser": "lib/browser.js",
+  "license": "Apache-2.0"
+}
 
 },{}]},{},[1]);

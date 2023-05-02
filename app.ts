@@ -1,9 +1,9 @@
-import makeGrage from 'grage-lib/grage'
+import makeClient from 'grage-lib/client'
 import esp8266 from 'grage-lib/esp8266'
 import util from 'grage-lib/util'
 
 window.onload = function () {
-    const grage = makeGrage();
+    const grage = makeClient();
     const data = grage.getData({});
     const id = data.currentID;
     //if no device selected, return to index

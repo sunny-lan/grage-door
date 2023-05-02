@@ -3,9 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const grage_1 = __importDefault(require("grage-lib/grage"));
+const client_1 = __importDefault(require("grage-lib/client"));
 window.onload = function () {
-    const grage = grage_1.default();
+    const grage = client_1.default();
     const data = grage.getData({});
     //if there is already a saved ID, use that
     if (data.currentID) {

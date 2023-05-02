@@ -3,11 +3,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const grage_1 = __importDefault(require("grage-lib/grage"));
+const client_1 = __importDefault(require("grage-lib/client"));
 const esp8266_1 = __importDefault(require("grage-lib/esp8266"));
 const util_1 = __importDefault(require("grage-lib/util"));
 window.onload = function () {
-    const grage = grage_1.default();
+    const grage = client_1.default();
     const data = grage.getData({});
     const id = data.currentID;
     //if no device selected, return to index

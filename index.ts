@@ -1,7 +1,7 @@
-import makeGrage from 'grage-lib/grage';
+import makeClient from 'grage-lib/client';
 
 window.onload = function () {
-    const grage = makeGrage();
+    const grage = makeClient();
     const data = grage.getData({});
 
     //if there is already a saved ID, use that
